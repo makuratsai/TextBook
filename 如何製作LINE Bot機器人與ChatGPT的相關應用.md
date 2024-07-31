@@ -197,17 +197,71 @@
 ### 3. 建立LINE Bot
 
 #### 創建LINE Bot帳戶
-1. 登錄LINE Developer帳戶。
-2. 創建一個新的Messaging API頻道。
-3. 記錄下Channel Secret和Access Token。
 
-#### 設置Webhook URL
-1. 在LINE Developer Console中找到你的頻道設定。
-2. 設置Webhook URL為你的伺服器地址。
+1. **登錄LINE Developer帳戶**
+   - 打開瀏覽器，訪問 [LINE Developer](https://developers.line.biz/zh-hant/).
+   - 如果你還沒有LINE帳戶，請先註冊一個。如果已經有帳戶，直接使用LINE帳戶登入。
+
+2. **創建一個新的Messaging API頻道**
+   - 登錄後，進入LINE Developers Console。
+   - 點擊右上角的“Create New Provider”按鈕，填寫Provider名稱（例如“我的Bot”），然後點擊“Create”。
+   - 選擇剛創建的Provider，點擊“Create Channel”按鈕。
+   - 在彈出的選項中選擇“Messaging API”。
+   - 按照提示填寫頻道基本信息，包括Channel名稱、描述、類別等。注意，名稱和描述將在用戶添加你的Bot時顯示，所以請務必準確和吸引人。
+   - 完成後，系統會生成一個Channel ID、Channel Secret和Channel Access Token。記錄下這些信息，後續的開發中將會用到。
+
+3. **設置Webhook URL**
+   - 在LINE Developer Console中，找到剛創建的頻道，進入其詳細設定頁面。
+   - 在設定頁面中找到“Messaging settings”部分。
+   - 設置Webhook URL為你的伺服器地址（例如：http://yourdomain.com/callback）。此URL將用於接收來自LINE的訊息事件通知。
+   - 確保啟用“Use webhook”選項，以便LINE能夠將訊息事件發送到你的Webhook URL。
+   - 測試Webhook URL是否可用，可以使用LINE提供的測試工具，確認你的伺服器能夠接收到並處理來自LINE的事件通知。
 
 #### LINE Messaging API介紹
-LINE Messaging API提供了一組RESTful API，可以用來與LINE平台進行交互。你可以使用這些API來發送和接收訊息、獲取用戶資料等。
 
+**LINE Messaging API**提供了一組RESTful API，可以用來與LINE平台進行交互。你可以使用這些API來發送和接收訊息、獲取用戶資料等。以下是一些主要功能：
+
+- **發送訊息**：使用API發送文字訊息、圖片、影片、音訊、貼圖等多媒體訊息給用戶。
+- **接收訊息**：通過Webhook接收來自用戶的訊息，並根據訊息內容進行處理和回應。
+- **獲取用戶資料**：使用API獲取用戶的基本資料，如用戶ID、名稱、圖片等。
+- **多樣的訊息格式**：支持發送模板訊息、圖文訊息、多媒體訊息等多種格式，增強互動效果。
+
+### 完整操作流程說明
+
+#### 步驟1：創建LINE Developer帳戶並創建Provider
+
+1. 訪問 [LINE Developer](https://developers.line.biz/zh-hant/)。
+2. 點擊右上角的“Login”按鈕，使用你的LINE帳戶登入。如果你沒有LINE帳戶，請先註冊。
+3. 登入後，在主頁上找到“Create New Provider”按鈕，點擊進入。
+4. 在彈出的對話框中，填寫Provider名稱（例如“我的Bot”），然後點擊“Create”按鈕。這將創建一個新的Provider。
+
+#### 步驟2：創建Messaging API頻道
+
+1. 選擇剛創建的Provider，進入其詳細頁面。
+2. 點擊“Create Channel”按鈕，選擇“Messaging API”。
+3. 填寫頻道的基本信息：
+   - **Channel名稱**：填寫你Bot的名稱，這將顯示在用戶的LINE應用中。
+   - **Channel描述**：簡要描述你的Bot的功能和用途。
+   - **類別**：選擇合適的類別，這有助於用戶找到你的Bot。
+4. 完成後，點擊“Create”按鈕。系統將生成一個Channel ID、Channel Secret和Channel Access Token，這些信息將在後續步驟中使用。
+
+#### 步驟3：設置Webhook URL
+
+1. 在LINE Developer Console中，選擇你剛創建的頻道，進入其詳細設定頁面。
+2. 在“Messaging settings”部分，找到Webhook URL的設置區域。
+3. 將Webhook URL設置為你的伺服器地址（例如：http://yourdomain.com/callback）。這個URL將用於接收來自LINE的訊息事件通知。
+4. 確保啟用“Use webhook”選項，然後保存設置。
+5. 測試Webhook URL是否可用，使用LINE提供的測試工具，確認你的伺服器能夠接收到並處理來自LINE的事件通知。
+
+這些步驟完成後，你已經成功設置了LINE Bot的基本配置，並且可以開始進行開發和整合工作。以下是一些專業的解釋：
+
+#### 專業解釋
+
+- **Channel Secret**：這是一個唯一的密鑰，用於驗證來自LINE平台的請求。確保這個密鑰的安全性，防止未經授權的訪問。
+- **Channel Access Token**：這是一個令牌，用於授權應用程序發送和接收訊息。當你的應用程序需要與LINE平台交互時，會使用這個令牌進行身份驗證。
+- **Webhook**：Webhook是一種回調機制，當特定事件發生時（例如用戶發送訊息給Bot），LINE平台將向你設置的Webhook URL發送HTTP POST請求。你的伺服器應該能夠處理這些請求並回應相應的動作。
+
+通過這些設置，你的LINE Bot能夠與用戶進行實時互動，並通過LINE Messaging API實現各種功能，如自動回應、資料查詢、訊息推送等。
 ### 4. 建立伺服器
 
 #### 選擇伺服器平台
