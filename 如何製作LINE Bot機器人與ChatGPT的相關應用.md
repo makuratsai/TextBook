@@ -249,7 +249,7 @@
 
 1. 在LINE Developer Console中，選擇你剛創建的頻道，進入其詳細設定頁面。
 2. 在“Messaging settings”部分，找到Webhook URL的設置區域。
-3. 將Webhook URL設置為你的伺服器地址（例如：http://yourdomain.com/callback）。這個URL將用於接收來自LINE的訊息事件通知。
+3. 將Webhook URL設置為你的伺服器地址（例如：http://yourdomain.com/callback ）。這個URL將用於接收來自LINE的訊息事件通知。
 4. 確保啟用“Use webhook”選項，然後保存設置。
 5. 測試Webhook URL是否可用，使用LINE提供的測試工具，確認你的伺服器能夠接收到並處理來自LINE的事件通知。
 
