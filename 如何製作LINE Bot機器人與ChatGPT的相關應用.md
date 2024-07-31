@@ -364,7 +364,7 @@
    - `ngrok`將生成一個公開URL，例如`http://your-ngrok-url.ngrok.io`，記錄下這個URL。
 
 3. **更新Webhook URL**
-   - 在LINE Developer Console中，將Webhook URL更新為你的本地伺服器地址（例如：http://127.0.0.1:8000/callback）。如果使用了`ngrok`，使用`ngrok`生成的公開URL（例如：http://your-ngrok-url.ngrok.io/callback）。
+   - 在LINE Developer Console中，將Webhook URL更新為你的本地伺服器地址（例如：http://127.0.0.1:8000/callback ）。如果使用了`ngrok`，使用`ngrok`生成的公開URL（例如：http://your-ngrok-url.ngrok.io/callback ）。
 
 #### 測試你的LINE Bot
 1. **發送訊息**
