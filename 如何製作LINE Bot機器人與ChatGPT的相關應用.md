@@ -60,20 +60,139 @@
 ### 2. 準備工作
 
 #### 必要工具與資源
-- 一台電腦
-- 網路連線
-- 開發環境（Python, Flask）
-- LINE Developer帳戶
-- OpenAI API Key
+在開始開發之前，你需要準備以下工具和資源：
+- **一台電腦**：適合開發工作的電腦，推薦使用具備較好性能的設備。
+- **網路連線**：穩定的網路連線，以便下載必要的軟體和工具以及測試應用。
+- **開發環境**：包括Python和Flask，這是本教程中所使用的主要開發技術。
+- **LINE Developer帳戶**：用於創建和管理LINE Bot。
+- **OpenAI API Key**：用於訪問和使用ChatGPT服務。
 
 #### 建立LINE Developer帳戶
-1. 訪問 [LINE Developer](https://developers.line.biz/).
-2. 註冊並登錄。
-3. 創建新頻道（Messaging API）。
+
+1. **訪問LINE Developer**
+   - 打開瀏覽器，訪問 [LINE Developer](https://developers.line.biz/zh-hant/).
+
+2. **註冊並登錄**
+   - 如果你還沒有LINE帳戶，請先註冊一個。如果已經有帳戶，直接使用LINE帳戶登入。
+
+3. **創建新頻道（Messaging API）**
+   - 在登入後，進入LINE Developers Console。
+   - 點擊“Create New Provider”，填寫Provider名稱（例如“我的Bot”）。
+   - 點擊“Create”後，選擇剛創建的Provider，然後點擊“Create Channel”。
+   - 選擇“Messaging API”，並按照提示填寫頻道基本信息，包括Channel名稱、描述、類別等。
+   - 完成後，記錄下你的Channel ID、Channel Secret和Channel Access Token，這些信息將在後續步驟中使用。
 
 #### 註冊OpenAI API
-1. 訪問 [OpenAI](https://openai.com/).
-2. 註冊並獲取API Key。
+
+1. **訪問OpenAI**
+   - 打開瀏覽器，訪問 [OpenAI](https://openai.com/).
+
+2. **註冊並獲取API Key**
+   - 如果你還沒有OpenAI帳戶，請先註冊一個。如果已經有帳戶，直接登入。
+   - 登入後，進入OpenAI Dashboard。
+   - 點擊“API Keys”選項，然後生成一個新的API Key。記錄下這個API Key，稍後將用於調用ChatGPT API。
+
+### 設置開發環境
+
+1. **安裝Python**
+   - 訪問[Python官網](https://www.python.org/)，下載並安裝最新版本的Python。
+   - 在安裝過程中，確保選中“Add Python to PATH”選項。
+
+2. **設置虛擬環境**
+   - 在命令行（Windows命令提示符或macOS/Linux的Terminal）中創建一個新的虛擬環境並激活它：
+     ```bash
+     python3 -m venv myenv
+     source myenv/bin/activate  # 在Windows中使用 `myenv\Scripts\activate`
+     ```
+
+3. **安裝Flask**
+   - 在激活的虛擬環境中安裝Flask：
+     ```bash
+     pip install Flask
+     ```
+
+### 建立LINE Bot應用
+
+1. **創建專案目錄**
+   - 在命令行中創建一個新的專案目錄並進入該目錄：
+     ```bash
+     mkdir line_bot
+     cd line_bot
+     ```
+
+2. **安裝LINE Bot SDK**
+   - 在專案目錄中安裝LINE Bot SDK：
+     ```bash
+     pip install line-bot-sdk
+     ```
+
+3. **撰寫基本Flask應用程式**
+   - 在專案目錄中創建一個名為`app.py`的文件，並撰寫基本的Flask應用程式：
+     ```python
+     from flask import Flask, request, abort
+     from linebot import LineBotApi, WebhookHandler
+     from linebot.exceptions import InvalidSignatureError
+     from linebot.models import MessageEvent, TextMessage, TextSendMessage
+
+     app = Flask(__name__)
+
+     # 替換成你的Channel Access Token和Channel Secret
+     line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')
+     handler = WebhookHandler('YOUR_CHANNEL_SECRET')
+
+     @app.route('/callback', methods=['POST'])
+     def callback():
+         signature = request.headers['X-Line-Signature']
+         body = request.get_data(as_text=True)
+         try:
+             handler.handle(body, signature)
+         except InvalidSignatureError:
+             abort(400)
+         return 'OK'
+
+     @handler.add(MessageEvent, message=TextMessage)
+     def handle_message(event):
+         line_bot_api.reply_message(
+             event.reply_token,
+             TextSendMessage(text=event.message.text))
+
+     if __name__ == '__main__':
+         app.run()
+     ```
+
+### 整合ChatGPT
+
+1. **安裝OpenAI的Python套件**
+   - 在專案目錄中安裝OpenAI的Python套件：
+     ```bash
+     pip install openai
+     ```
+
+2. **撰寫呼叫OpenAI API的程式碼**
+   - 在`app.py`文件中，添加呼叫OpenAI API的功能：
+     ```python
+     import openai
+
+     openai.api_key = 'YOUR_API_KEY'
+
+     def get_gpt_response(prompt):
+         response = openai.Completion.create(
+             engine="davinci-codex",
+             prompt=prompt,
+             max_tokens=150
+         )
+         return response.choices[0].text.strip()
+
+     @handler.add(MessageEvent, message=TextMessage)
+     def handle_message(event):
+         user_message = event.message.text
+         gpt_response = get_gpt_response(user_message)
+         line_bot_api.reply_message(
+             event.reply_token,
+             TextSendMessage(text=gpt_response))
+     ```
+
+至此，你已經完成了設置開發環境、建立LINE Bot應用並整合ChatGPT的基本步驟。接下來，你可以根據需求進一步擴展和優化你的應用。
 
 ### 3. 建立LINE Bot
 
