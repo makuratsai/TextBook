@@ -262,38 +262,116 @@
 - **Webhook**：Webhook是一種回調機制，當特定事件發生時（例如用戶發送訊息給Bot），LINE平台將向你設置的Webhook URL發送HTTP POST請求。你的伺服器應該能夠處理這些請求並回應相應的動作。
 
 通過這些設置，你的LINE Bot能夠與用戶進行實時互動，並通過LINE Messaging API實現各種功能，如自動回應、資料查詢、訊息推送等。
-### 4. 建立伺服器
+### 4. 建立伺服器（本地部署）
+
+在這一部分，我們將使用Python的Flask框架來建立一個簡單的伺服器，實現一個基本的echo機器人範例，並將其部署在本地伺服器上。
 
 #### 選擇伺服器平台
-推薦的伺服器平台有Heroku和AWS，這些平台提供免費層級和簡便的部署方式。
+我們將使用本地伺服器來部署應用程式。確保你的本地機器已安裝並配置了Python環境。
 
 #### 設置Python環境
-1. 安裝Python（建議使用Python 3.8或以上版本）。
-2. 安裝虛擬環境：
-   ```bash
-   python3 -m venv myenv
-   source myenv/bin/activate
-   ```
+1. **安裝Python**
+   - 訪問[Python官網](https://www.python.org/)，下載並安裝最新版本的Python。
+   - 在安裝過程中，確保選中“Add Python to PATH”選項。
 
-#### 安裝並配置Flask
-1. 安裝Flask：
-   ```bash
-   pip install Flask
-   ```
-2. 創建Flask應用程式：
+2. **設置虛擬環境**
+   - 在命令行（Windows命令提示符或macOS/Linux的Terminal）中創建一個新的虛擬環境並激活它：
+     ```bash
+     python3 -m venv myenv
+     source myenv/bin/activate  # 在Windows中使用 `myenv\Scripts\activate`
+     ```
+
+3. **安裝Flask**
+   - 在激活的虛擬環境中安裝Flask：
+     ```bash
+     pip install Flask
+     ```
+
+#### 建立LINE Bot應用
+
+1. **創建專案目錄**
+   - 在命令行中創建一個新的專案目錄並進入該目錄：
+     ```bash
+     mkdir line_bot
+     cd line_bot
+     ```
+
+2. **安裝LINE Bot SDK**
+   - 在專案目錄中安裝LINE Bot SDK：
+     ```bash
+     pip install line-bot-sdk
+     ```
+
+3. **撰寫基本Flask應用程式**
+
+   在專案目錄中創建一個名為`app.py`的文件，並撰寫基本的Flask應用程式以實現echo機器人的功能：
+
    ```python
    from flask import Flask, request, abort
+   from linebot import LineBotApi, WebhookHandler
+   from linebot.exceptions import InvalidSignatureError
+   from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
    app = Flask(__name__)
 
+   # 替換成你的Channel Access Token和Channel Secret
+   line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')
+   handler = WebhookHandler('YOUR_CHANNEL_SECRET')
+
    @app.route('/callback', methods=['POST'])
    def callback():
-       # 處理LINE訊息
+       # 獲取X-Line-Signature頭信息
+       signature = request.headers['X-Line-Signature']
+
+       # 獲取請求的body
+       body = request.get_data(as_text=True)
+       app.logger.info(f"Request body: {body}")
+
+       # 驗證簽名
+       try:
+           handler.handle(body, signature)
+       except InvalidSignatureError:
+           abort(400)
+
        return 'OK'
 
+   @handler.add(MessageEvent, message=TextMessage)
+   def handle_message(event):
+       # 回應用戶發送的訊息
+       line_bot_api.reply_message(
+           event.reply_token,
+           TextSendMessage(text=event.message.text))
+
    if __name__ == '__main__':
-       app.run()
+       app.run(port=8000)
    ```
+
+#### 配置本地伺服器
+
+1. **運行Flask應用**
+   - 在命令行中運行以下命令來啟動本地伺服器：
+     ```bash
+     python app.py
+     ```
+   - 默認情況下，Flask應用將運行在`http://127.0.0.1:8000/`。
+
+2. **設置本地端口轉發（可選）**
+   - 如果你的本地機器在防火牆後面，或需要外部訪問，你可以使用工具如`ngrok`來設置本地端口轉發。
+   - 安裝並運行`ngrok`，將本地伺服器端口（8000）轉發到公開URL：
+     ```bash
+     ./ngrok http 8000
+     ```
+   - `ngrok`將生成一個公開URL，例如`http://your-ngrok-url.ngrok.io`，記錄下這個URL。
+
+3. **更新Webhook URL**
+   - 在LINE Developer Console中，將Webhook URL更新為你的本地伺服器地址（例如：http://127.0.0.1:8000/callback）。如果使用了`ngrok`，使用`ngrok`生成的公開URL（例如：http://your-ngrok-url.ngrok.io/callback）。
+
+#### 測試你的LINE Bot
+1. **發送訊息**
+   - 打開LINE應用，向你的Bot發送一條訊息。
+   - Bot應該會回應相同的訊息內容，實現echo機器人的功能。
+
+通過這些步驟，你已經成功地在本地部署並運行了LINE Bot應用。當用戶發送訊息給你的Bot時，Bot將會回應相同的訊息內容，實現echo機器人的功能。
 
 ### 5. 編寫基本LINE Bot程式碼
 
