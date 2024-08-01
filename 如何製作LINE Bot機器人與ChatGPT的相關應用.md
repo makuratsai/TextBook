@@ -823,148 +823,219 @@ OpenAI API允許你呼叫ChatGPT模型來生成自然語言回應。你需要使
 通過以上步驟，你可以成功地在本地部署並維護你的LINE Bot應用程式，確保其穩定運行並持續改進。
 ### 10. 實例應用
 
+在這一部分，我們將進一步擴展和改進客服機器人和預約系統的範例，以使它們更加實用和智能。
+
 #### 客服機器人
 
 **實作方法**：
-1. 設計常見問題和答案。
-2. 使用ChatGPT生成回答。
-3. 在Flask中設置對應的回應邏輯：
-   ```python
-   common_questions = {
-       "營業時間": "我們的營業時間是周一至周五，上午9點至下午6點。",
-       "地址": "我們的地址是台北市中正區某某路123號。"
-   }
+我們將改進客服機器人，增加以下功能：
+1. 多輪對話：實現多輪對話功能，根據用戶的提問進行多步回應。
+2. 常見問題學習：記錄用戶的問題，並在未來的回答中提供更準確的答案。
 
-   @handler.add(MessageEvent, message=TextMessage)
-   def handle_message(event):
-       user_message = event.message.text
-       if user_message in common_questions:
-           reply_text = common_questions[user_message]
-       else:
-           reply_text = get_gpt_response(user_message)
-       line_bot_api.reply_message(
-           event.reply_token,
-           TextSendMessage(text=reply_text))
-   ```
+**範例程式碼**：
 
-#### 教育輔助機器人
+```python
+from flask import Flask, request, abort
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
+import openai
+from sqlalchemy import create_engine, Column, Integer, String, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-**實作方法**：
-1. 設計教育內容和互動問題。
-2. 使用ChatGPT生成學習資源。
-3. 在Flask中實現對話流程：
-   ```python
-   education_content = {
-       "數學": "請告訴我你對數學的具體問題，例如：二次方程。",
-       "英文": "請告訴我你需要幫助的英文主題，例如：文法或詞彙。"
-   }
+app = Flask(__name__)
 
-   @handler.add(MessageEvent, message=TextMessage)
-   def handle_message(event):
-       user_message = event.message.text
-       if user_message in education_content:
-           reply_text = education_content[user_message]
-       else:
-           reply_text = get_gpt_response(user_message)
-       line_bot_api.reply_message(
-           event.reply_token,
-           TextSendMessage(text=reply_text))
-   ```
+# 替換成你的Channel Access Token和Channel Secret
+line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')
+handler = WebhookHandler('YOUR_CHANNEL_SECRET')
 
-#### 行銷推廣機器人
+# 替換成你的OpenAI API Key
+openai.api_key = 'YOUR_OPENAI_API_KEY'
 
-**實作方法**：
-1. 設計行銷活動和推廣內容。
-2. 使用ChatGPT生成個性化推廣訊息。
-3. 在Flask中設置定期推送功能：
-   ```python
-   import schedule
-   import time
+# 設置SQLite數據庫
+engine = create_engine('sqlite:///faq.db')
+Base = declarative_base()
 
-   def send_promotional_message():
-       message = "今天的特價商品是..."
-       users = get_all_users()  # 獲取所有用戶
-       for user_id in users:
-           line_bot_api.push_message(user_id, TextSendMessage(text=message))
+class FAQ(Base):
+    __tablename__ = 'faq'
+    id = Column(Integer, primary_key=True)
+    question = Column(Text, unique=True)
+    answer = Column(Text)
 
-   schedule.every().day.at("10:00").do(send_promotional_message)
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
 
-   while True:
-       schedule.run_pending()
-       time.sleep(1)
-   ```
+def get_gpt_response(prompt):
+    response = openai.Completion.create(
+        engine="davinci-codex",
+        prompt=prompt,
+        max_tokens=150
+    )
+    return response.choices[0].text.strip()
+
+@app.route('/callback', methods=['POST'])
+def callback():
+    # 獲取X-Line-Signature頭信息
+    signature = request.headers['X-Line-Signature']
+
+    # 獲取請求的body
+    body = request.get_data(as_text=True)
+    app.logger.info(f"Request body: {body}")
+
+    # 驗證簽名
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        abort(400)
+
+    return 'OK'
+
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_message = event.message.text
+    session = Session()
+    faq_entry = session.query(FAQ).filter_by(question=user_message).first()
+    
+    if faq_entry:
+        reply_text = faq_entry.answer
+    else:
+        gpt_response = get_gpt_response(user_message)
+        new_faq = FAQ(question=user_message, answer=gpt_response)
+        session.add(new_faq)
+        session.commit()
+        reply_text = gpt_response
+
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=reply_text))
+
+if __name__ == '__main__':
+    app.run(port=8000)
+```
+
+在這個範例中，機器人會根據用戶的提問檢查FAQ數據庫，如果找到匹配的問題，則直接回應答案。如果未找到，則使用ChatGPT生成回應，並將問題和答案存儲到FAQ數據庫中，以便將來使用。
 
 #### 預約系統
 
 **實作方法**：
-1. 設計預約流程和訊息模板。
-2. 使用ChatGPT協助確認預約。
-3. 在Flask中儲存和管理預約信息：
-   ```python
-   appointments = {}
+我們將改進預約系統，增加以下功能：
+1. 預約確認和取消：用戶可以查看已確認的預約，並進行取消。
+2. 預約衝突檢查：在確認預約前檢查是否存在時間衝突。
 
-   @handler.add(MessageEvent, message=TextMessage)
-   def handle_message(event):
-       user_message = event.message.text
-       user_id = event.source.user_id
-       if user_message.startswith("預約"):
-           appointments[user_id] = user_message[2:]
-           reply_text = "您的預約已確認：" + appointments[user_id]
-       else:
-           reply_text = get_gpt_response(user_message)
-       line_bot_api.reply_message(
-           event.reply_token,
-           TextSendMessage(text=reply_text))
-   ```
+**範例程式碼**：
 
-#### 健康顧問
+```python
+from flask import Flask, request, abort
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import re
+from datetime import datetime
 
-**實作方法**：
-1. 設計健康問卷和顧問內容。
-2. 使用ChatGPT提供健康建議。
-3. 在Flask中實現數據分析和反饋機制：
-   ```python
-   health_advice = {
-       "運動": "每日建議30分鐘的有氧運動。",
-       "飲食": "多吃蔬菜水果，少吃油炸食品。"
-   }
+app = Flask(__name__)
 
-   @handler.add(MessageEvent, message=TextMessage)
-   def handle_message(event):
-       user_message = event.message.text
-       if user_message in health_advice:
-           reply_text = health_advice[user_message]
-       else:
-           reply_text = get_gpt_response(user_message)
-       line_bot_api.reply_message(
-           event.reply_token,
-           TextSendMessage(text=reply_text))
-   ```
+# 替換成你的Channel Access Token和Channel Secret
+line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')
+handler = WebhookHandler('YOUR_CHANNEL_SECRET')
 
-#### 其他創意應用
+# 設置SQLite數據庫
+engine = create_engine('sqlite:///appointments.db')
+Base = declarative_base()
 
-**實作方法**：
-1. 確定創意應用場景。
-2. 使用ChatGPT提供相關服務。
-3. 在Flask中實現具體功能：
-   ```python
-   creative_applications = {
-       "詩歌生成": "請輸入主題，我將為你生成一首詩。",
-       "故事創作": "請輸入故事的開頭，我將繼續創作。"
-   }
+class Appointment(Base):
+    __tablename__ = 'appointments'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(String)
+    date_time = Column(DateTime)
+    status = Column(String, default='confirmed')
 
-   @handler.add(MessageEvent, message=TextMessage)
-   def handle_message(event):
-       user_message = event.message.text
-       if user_message in creative_applications:
-           reply_text = creative_applications[user_message]
-       else:
-           reply_text = get_gpt_response(user_message)
-       line_bot_api.reply_message(
-           event.reply_token,
-           TextSendMessage(text=reply_text))
-   ```
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
 
----
+@app.route('/callback', methods=['POST'])
+def callback():
+    # 獲取X-Line-Signature頭信息
+    signature = request.headers['X-Line-Signature']
 
+    # 獲取請求的body
+    body = request.get_data(as_text=True)
+    app.logger.info(f"Request body: {body}")
+
+    # 驗證簽名
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        abort(400)
+
+    return 'OK'
+
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_message = event.message.text
+    user_id = event.source.user_id
+    session = Session()
+
+    if user_message.startswith('預約'):
+        match = re.match(r'預約 (\d{4}-\d{2}-\d{2} \d{2}:\d{2})', user_message)
+        if match:
+            date_time_str = match.group(1)
+            date_time = datetime.strptime(date_time_str, '%Y-%m-%d %H:%M')
+
+            # 檢查是否存在衝突的預約
+            conflict = session.query(Appointment).filter_by(user_id=user_id, date_time=date_time, status='confirmed').first()
+            if conflict:
+                reply_text = f"您已在該時間有其他預約：{date_time_str}"
+            else:
+                appointment = Appointment(user_id=user_id, date_time=date_time)
+                session.add(appointment)
+                session.commit()
+                reply_text = f"您的預約已確認：{date_time_str}"
+        else:
+            reply_text = "請使用正確的格式進行預約，例如：預約 2024-08-15 14:00"
+
+    elif user_message.startswith('查看預約'):
+        appointments = session.query(Appointment).filter_by(user_id=user_id, status='confirmed').all()
+        if appointments:
+            reply_text = "您的預約：\n" + "\n".join([f"{a.date_time.strftime('%Y-%m-%d %H:%M')}" for a in appointments])
+        else:
+            reply_text = "您沒有任何預約。"
+
+    elif user_message.startswith('取消預約'):
+        match = re.match(r'取消預約 (\d{4}-\d{2}-\d{2} \d{2}:\d{2})', user_message)
+        if match:
+            date_time_str = match.group(1)
+            date_time = datetime.strptime(date_time_str, '%Y-%m-%d %H:%M')
+            appointment = session.query(Appointment).filter_by(user_id=user_id, date_time=date_time, status='confirmed').first()
+            if appointment:
+                appointment.status = 'cancelled'
+                session.commit()
+                reply_text = f"您的預約已取消：{date_time_str}"
+            else:
+                reply_text = f"未找到該時間的預約：{date_time_str}"
+        else:
+            reply_text = "請使用正確的格式進行取消，例如：取消預約 2024-08-15 14:00"
+
+    else:
+        reply_text = "可用命令：\n預約 YYYY-MM-DD HH:MM\n查看預約\n取消預約 YYYY-MM-DD HH:MM"
+
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=reply_text))
+
+if __name__ == '__main__':
+    app.run(port=8000)
+```
+
+在這個範例中，預約系統增加了查看預約和取消預約的功能，並在確認預約前檢查是否存在時間衝突。用戶可以使用以下命令與系統互動：
+- **預約 YYYY-MM-DD HH:MM**：預約指定時間。
+- **查看預約**：查看所有已確認的預約。
+- **取消預約 YYYY-MM-DD HH:MM**：取消指定時間的預約。
+
+這些改進使得客服機器人和預約系統更加實用和智能，提供了更豐富的功能和更好的用戶體驗。
 
