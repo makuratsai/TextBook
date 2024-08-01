@@ -630,13 +630,78 @@ OpenAI API允許你呼叫ChatGPT模型來生成自然語言回應。你需要使
 
 ### 8. 測試與除錯
 
-#### 測試
+在開發完成後，對LINE Bot進行測試與除錯是確保其穩定性和功能完整性的重要步驟。以下是一些測試與除錯的具體步驟和方法。
 
-LINE Bot功能
-使用LINE Developer Console中的測試工具，檢查Bot的回應是否正確。
+#### 測試LINE Bot功能
+
+1. **基本測試**
+   - **測試啟動**：確保Flask伺服器能正常啟動，並在預期的端口上運行。
+     ```bash
+     python app.py
+     ```
+   - **測試Webhook**：確認在LINE Developer Console中設置的Webhook URL正確並可達，這可以通過手動訪問Webhook URL或使用工具如`curl`來測試。
+     ```bash
+     curl -X POST -H "Content-Type: application/json" -d '{"events":[]}' http://localhost:8000/callback
+     ```
+
+2. **功能測試**
+   - **Echo功能測試**：在LINE應用中向Bot發送一條訊息，確認Bot能正確回應相同的訊息。
+     - 發送訊息：「Hello, Bot!」
+     - 預期回應：「Hello, Bot!」
+
+   - **NLP功能測試**：發送包含多個命名實體的訊息，確認Bot能正確識別並回應。
+     - 發送訊息：「I will travel to New York next week.」
+     - 預期回應：「你提到了以下內容: [('New York', 'GPE'), ('next week', 'DATE')]」
+
+   - **資料庫儲存測試**：發送訊息，確認Bot能將訊息正確儲存到資料庫，並回應確認。
+     - 發送訊息：「This is a test message.」
+     - 預期回應：「你的訊息已儲存: This is a test message」
 
 #### 常見問題與解決方案
-列出開發過程中常見的問題，如Webhook無回應、訊息格式錯誤等，並提供解決方案。
+
+1. **Webhook無法連接**
+   - **問題**：LINE平台無法連接到設置的Webhook URL。
+   - **解決方案**：確認Webhook URL正確並且伺服器正在運行。如果使用`ngrok`進行端口轉發，確保`ngrok`正在運行並生成正確的公開URL。
+
+2. **Invalid Signature Error**
+   - **問題**：在處理請求時，出現`InvalidSignatureError`。
+   - **解決方案**：確認你在代碼中使用的Channel Secret和Access Token正確無誤。這些憑證需要與LINE Developer Console中的設置一致。
+
+3. **回應訊息不正確**
+   - **問題**：Bot回應的訊息與預期不符。
+   - **解決方案**：檢查處理訊息的邏輯，確認事件處理函數是否正確解析和回應用戶訊息。可以在代碼中添加日誌輸出，幫助診斷問題。
+     ```python
+     @handler.add(MessageEvent, message=TextMessage)
+     def handle_message(event):
+         user_message = event.message.text
+         app.logger.info(f"Received message: {user_message}")
+         gpt_response = get_gpt_response(user_message)
+         app.logger.info(f"GPT response: {gpt_response}")
+         line_bot_api.reply_message(
+             event.reply_token,
+             TextSendMessage(text=gpt_response))
+     ```
+
+4. **資料庫連接問題**
+   - **問題**：Bot無法將訊息儲存到資料庫。
+   - **解決方案**：確認SQLAlchemy配置正確，數據庫文件是否存在，並且應用程式具有讀寫權限。檢查資料庫連接是否成功，可以通過打印日誌來驗證。
+     ```python
+     engine = create_engine('sqlite:///users.db')
+     app.logger.info("Database engine created successfully")
+     ```
+
+#### 測試與除錯工具
+
+1. **Postman**
+   - Postman是一個強大的API測試工具，可以幫助你模擬HTTP請求並查看回應。你可以使用Postman向Webhook URL發送測試請求，檢查伺服器的回應和狀態碼。
+
+2. **ngrok**
+   - 如果你需要將本地伺服器公開給外部訪問，ngrok是一個非常有用的工具。它可以將你的本地伺服器端口轉發到一個公開URL，方便測試Webhook。
+
+3. **LINE Messaging API測試工具**
+   - LINE Developer Console提供了一些內建的測試工具，幫助你測試和調試Bot的行為。你可以在「Messaging API」頁面找到這些工具，模擬發送訊息和事件。
+
+通過這些步驟和工具，你可以有效地測試和除錯你的LINE Bot應用，確保其穩定性和功能完整性。
 
 ### 9. 部署與維護
 
