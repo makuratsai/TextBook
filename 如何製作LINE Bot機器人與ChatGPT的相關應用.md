@@ -494,14 +494,139 @@ OpenAI API允許你呼叫ChatGPT模型來生成自然語言回應。你需要使
 
 ### 7. 進階功能
 
-#### 增加自然語言處理功能
-你可以使用更多的NLP工具，如spaCy或NLTK，來增強你的Bot的理解能力。
+在這一部分，我們將介紹一些進階功能，這些功能可以讓你的LINE Bot更智能、更具互動性。我們將增加兩個範例：自然語言處理（NLP）和使用資料庫儲存用戶數據。
 
-#### 設計對話流程
-設計多輪對話流程，確保Bot能夠處理更複雜的對話情境。
+#### 增加自然語言處理（NLP）功能
 
-#### 儲存與管理用戶數據
-使用數據庫（例如SQLite或MySQL）來儲存用戶數據，並基於這些數據提供個性化服務。
+使用NLP工具可以讓你的LINE Bot更加智能，能夠更好地理解和處理用戶的訊息。這裡我們使用spaCy來進行基本的自然語言處理。
+
+1. **安裝spaCy和語言模型**
+   ```bash
+   pip install spacy
+   python -m spacy download en_core_web_sm
+   ```
+
+2. **更新Flask應用程式以使用spaCy**
+   ```python
+   from flask import Flask, request, abort
+   from linebot import LineBotApi, WebhookHandler
+   from linebot.exceptions import InvalidSignatureError
+   from linebot.models import MessageEvent, TextMessage, TextSendMessage
+   import spacy
+
+   app = Flask(__name__)
+
+   # 替換成你的Channel Access Token和Channel Secret
+   line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')
+   handler = WebhookHandler('YOUR_CHANNEL_SECRET')
+
+   # 加載spaCy模型
+   nlp = spacy.load("en_core_web_sm")
+
+   @app.route('/callback', methods=['POST'])
+   def callback():
+       signature = request.headers['X-Line-Signature']
+       body = request.get_data(as_text=True)
+       app.logger.info(f"Request body: {body}")
+       try:
+           handler.handle(body, signature)
+       except InvalidSignatureError:
+           abort(400)
+       return 'OK'
+
+   @handler.add(MessageEvent, message=TextMessage)
+   def handle_message(event):
+       user_message = event.message.text
+       doc = nlp(user_message)
+       entities = [(ent.text, ent.label_) for ent in doc.ents]
+
+       response = f"你提到了以下內容: {entities}"
+       line_bot_api.reply_message(
+           event.reply_token,
+           TextSendMessage(text=response))
+
+   if __name__ == '__main__':
+       app.run(port=8000)
+   ```
+
+在這個範例中，Bot會分析用戶訊息中的命名實體，並回應提取出的實體及其類別。
+
+#### 使用資料庫儲存用戶數據
+
+使用資料庫可以儲存和管理用戶數據，以提供更個性化的服務。我們將使用SQLite作為範例。
+
+1. **安裝SQLite3和SQLAlchemy**
+   ```bash
+   pip install sqlalchemy
+   ```
+
+2. **設置SQLite數據庫**
+   ```python
+   from flask import Flask, request, abort
+   from linebot import LineBotApi, WebhookHandler
+   from linebot.exceptions import InvalidSignatureError
+   from linebot.models import MessageEvent, TextMessage, TextSendMessage
+   from sqlalchemy import create_engine, Column, Integer, String
+   from sqlalchemy.ext.declarative import declarative_base
+   from sqlalchemy.orm import sessionmaker
+
+   app = Flask(__name__)
+
+   # 替換成你的Channel Access Token和Channel Secret
+   line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')
+   handler = WebhookHandler('YOUR_CHANNEL_SECRET')
+
+   # 設置SQLite數據庫
+   engine = create_engine('sqlite:///users.db')
+   Base = declarative_base()
+
+   class User(Base):
+       __tablename__ = 'users'
+       id = Column(Integer, primary_key=True)
+       user_id = Column(String, unique=True)
+       message = Column(String)
+
+   Base.metadata.create_all(engine)
+   Session = sessionmaker(bind=engine)
+   session = Session()
+
+   @app.route('/callback', methods=['POST'])
+   def callback():
+       signature = request.headers['X-Line-Signature']
+       body = request.get_data(as_text=True)
+       app.logger.info(f"Request body: {body}")
+       try:
+           handler.handle(body, signature)
+       except InvalidSignatureError:
+           abort(400)
+       return 'OK'
+
+   @handler.add(MessageEvent, message=TextMessage)
+   def handle_message(event):
+       user_id = event.source.user_id
+       user_message = event.message.text
+
+       # 儲存用戶數據
+       user = session.query(User).filter_by(user_id=user_id).first()
+       if user is None:
+           user = User(user_id=user_id, message=user_message)
+           session.add(user)
+       else:
+           user.message = user_message
+       session.commit()
+
+       response = f"你的訊息已儲存: {user_message}"
+       line_bot_api.reply_message(
+           event.reply_token,
+           TextSendMessage(text=response))
+
+   if __name__ == '__main__':
+       app.run(port=8000)
+   ```
+
+在這個範例中，Bot會將用戶的訊息儲存到SQLite數據庫中，並回應告知用戶訊息已被儲存。
+
+這些進階功能可以讓你的LINE Bot更加智能和實用，能夠處理更複雜的任務和提供更個性化的服務。
 
 ### 8. 測試與除錯
 
