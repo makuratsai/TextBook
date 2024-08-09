@@ -34,16 +34,19 @@ class MyGPT:
         )
         return completion.choices[0].message.content
     
-    def PromptHelperWithoutExecuteForCodeGPT(self, issue, file_name) -> str:
+    def PromptHelperWithoutExecuteForCode(self, issue, file_name) -> str:
         return f'{issue} 並將其存為一個方法名稱為{file_name},且不需要執行'
     
-    def PromptHelperForCodeGPT(self, issue, file_name) -> str:
+    def PromptHelperForCode(self, issue, file_name) -> str:
         return f'{issue} 並將其存為一個方法名稱為{file_name},並顯示結果'
+    
+    def PromptHelperForAnalysisExcelCode(self, issue, file_name, output_file_name) -> str:
+        return f'資料來源檔案為{file_name}, {issue}, 並將其儲存為另一個檔案{output_file_name}'
 
     def CodeGPT(self, issue) -> str:
         completion = self.openai.chat.completions.create(
             model=self.__model__,
-            frequency_penalty=0,
+            frequency_penalty=2,
             messages=[
                 {"role": "system", "content": "你是一個程式碼產生器,依據提示產生Python程式碼,且不使用try...except語句,並將程式碼以<<<<與>>>>包住"},
                 {"role": "user", "content": f"{issue}"}
@@ -55,7 +58,7 @@ class MyGPT:
     def FixCodeGPT(self, code, errMessage) -> str:
         completion = self.openai.chat.completions.create(
             model=self.__model__,
-            frequency_penalty=1,
+            frequency_penalty=2,
             messages=[
                 {"role": "system", "content": "你是一個程式碼修復機,收到有錯誤的程式碼後會修復程式碼,且不使用try...except語句,並將程式碼以<<<<與>>>>包住"},
                 {"role": "user", "content": f"執行有問題的程式碼:{code} "},

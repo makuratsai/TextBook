@@ -1,0 +1,1 @@
+{"nation":"TW","factory":"VS1","supplier":"supplier_a","purchase_order":"採購單號","import_material_no":"入庫料號","inner_lotno":"內部批號","acceptance_date":"2024-08-08","packing_date":"2024-08-10","packing_no":"Packing No","moisture_rate":"回潮率%","pdf_commercial_weight":"PDF商業總重","fac_code":"包號開頭代碼","container_code":"貨櫃編號","area_description_prompt":"取出A7到J51的資料,並移除空白行"}
