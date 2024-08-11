@@ -34,6 +34,21 @@ class MyGPT:
         )
         return completion.choices[0].message.content
     
+    def CalGPT(self, msg) -> str:
+        completion = self.openai.chat.completions.create(
+            model=self.__model__,
+            frequency_penalty=0.5,
+            messages=[
+                {"role": "system", "content": "你是一個計算機,依據提示進行數學運算"},
+                {"role": "assistant", "content": "9.11 比 9.9 大。因為在小數點後的第一位數字上，9.11 的 1 大於 9.9 的 0，所以 9.11 的值更大。"},
+                {"role": "user", "content": "你說錯了,9.9比較大,你先忽略小數點,然後把整個數字從左邊的數字開始比較"},
+                {"role": "assistant", "content": "9.9比9.11 大。因為左邊第一個數字是9,兩者一樣,所以再比較第二個數字,9比1大,所以9.9比9.11大。"},
+                {"role": "user", "content": f"{msg}"}
+
+            ]
+        )
+        return completion.choices[0].message.content
+
     def PromptHelperWithoutExecuteForCode(self, issue, file_name) -> str:
         return f'{issue} 並將其存為一個方法名稱為{file_name},且不需要執行'
     
@@ -46,7 +61,7 @@ class MyGPT:
     def CodeGPT(self, issue) -> str:
         completion = self.openai.chat.completions.create(
             model=self.__model__,
-            frequency_penalty=2,
+            frequency_penalty=0.5,
             messages=[
                 {"role": "system", "content": "你是一個程式碼產生器,依據提示產生Python程式碼,且不使用try...except語句,並將程式碼以<<<<與>>>>包住"},
                 {"role": "user", "content": f"{issue}"}
