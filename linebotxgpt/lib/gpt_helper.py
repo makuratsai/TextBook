@@ -73,7 +73,7 @@ class MyGPT:
     def FixCodeGPT(self, code, errMessage) -> str:
         completion = self.openai.chat.completions.create(
             model=self.__model__,
-            frequency_penalty=2,
+            frequency_penalty=0.5,
             messages=[
                 {"role": "system", "content": "你是一個程式碼修復機,收到有錯誤的程式碼後會修復程式碼,且不使用try...except語句,並將程式碼以<<<<與>>>>包住"},
                 {"role": "user", "content": f"執行有問題的程式碼:{code} "},
